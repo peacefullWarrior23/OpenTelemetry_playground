@@ -1,0 +1,18 @@
+services:
+  # Jaeger all-in-one: receives OTLP spans and provides the trace UI
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - jaeger
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317

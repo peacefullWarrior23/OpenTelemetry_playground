@@ -1,0 +1,15 @@
+[project]
+name = "opentelemetry-playground"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi==0.115.0",
+    "opentelemetry-api==1.30.0",
+    "opentelemetry-exporter-otlp-proto-grpc==1.30.0",
+    "opentelemetry-instrumentation-fastapi==0.51b0",
+    "opentelemetry-sdk==1.30.0",
+    "setuptools>=70.0.0",
+    "uvicorn==0.30.6",
+]
