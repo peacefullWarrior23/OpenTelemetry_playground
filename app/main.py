@@ -16,7 +16,7 @@ resource = Resource.create({"service.name": "fastapi-otel-demo"})
 # 2. Create a TracerProvider and attach an exporter
 #    OTLPSpanExporter reads OTEL_EXPORTER_OTLP_ENDPOINT from the environment when no
 #    endpoint is passed — defaults to http://localhost:4317 if the var is not set.
-#    This lets docker-compose override it with the jaeger service hostname.
+#    This lets docker-compose override it with the tempo/Jaeger service hostname.
 provider = TracerProvider(resource=resource)
 exporter = OTLPSpanExporter()
 provider.add_span_processor(BatchSpanProcessor(exporter))
@@ -45,7 +45,8 @@ def traced_function(func):
 # @traced_function
 @app.get("/")
 def root():
-    return {"message": "hello — check Jaeger at http://localhost:16686"}
+    # return {"message": "hello — check Jaeger at http://localhost:16686"}
+    return {"message": "hello — check Grafana at http://localhost:3000"}
 
 
 @app.get("/items/{item_id}")
@@ -83,7 +84,7 @@ def trigger_error():
         try:
             raise ValueError("something went wrong")
         except ValueError as exc:
-            # 9. Record exceptions on the span — shows up as an event in Jaeger
+            # 9. Record exceptions on the span — shows up as an event in Grafana/Jaeger
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR, str(exc))
             return {"error": str(exc)}
