@@ -1,0 +1,37 @@
+// 1. Discover all running Docker containers via the Docker socket
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// 2. Relabel: extract useful labels from Docker metadata so logs are easy to
+//    filter in Grafana (e.g. service="app", container="otel-playground-app-1")
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    // Pull the Compose service name (e.g. "app", "tempo", "grafana")
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    // Strip the leading "/" from the container name
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+// 3. Tail stdout/stderr from every discovered container and forward to Loki
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.write.local.receiver]
+}
+
+// 4. Push logs to the Loki service
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

@@ -1,4 +1,5 @@
 import time
+import logging
 import functools
 
 from fastapi import FastAPI
@@ -26,6 +27,10 @@ trace.set_tracer_provider(provider)
 
 # 4. Get a named tracer for this module
 tracer = trace.get_tracer(__name__)
+
+# Logging — stdout is captured by Alloy and forwarded to Loki
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="FastAPI + OpenTelemetry Demo")
 
@@ -60,7 +65,9 @@ def get_item(item_id: int):
 
     result = _load_from_db(item_id)
 
-    span.set_attribute("item.found", result is not None)
+    found = result is not None
+    span.set_attribute("item.found", found)
+    logger.info("get_item item_id=%s found=%s", item_id, found)
     return result or {"error": "not found"}
 
 
@@ -72,7 +79,7 @@ def _load_from_db(item_id: int) -> dict | None:
 
         # Simulate DB: only item 42 exists
         if item_id == 42:
-            print("Sleeping for 1 second")
+            logger.info("db-query hit slow path for item_id=%s, sleeping 1s", item_id)
             time.sleep(1)
             return {"id": 42, "name": "The Answer"}
         return None
@@ -87,4 +94,5 @@ def trigger_error():
             # 9. Record exceptions on the span — shows up as an event in Grafana/Jaeger
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR, str(exc))
+            logger.error("risky-operation failed: %s", exc)
             return {"error": str(exc)}

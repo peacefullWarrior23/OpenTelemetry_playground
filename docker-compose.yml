@@ -5,8 +5,25 @@ services:
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo.yaml
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
+      - "4317:4317"   # OTLP gRPC receiver (spans from FastAPI app)
       - "3200:3200"   # Tempo HTTP API (queried by Grafana)
+
+  loki:
+    image: grafana/loki:3.0.0
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./loki/loki.yaml:/etc/loki/loki.yaml
+    ports:
+      - "3100:3100"   # Loki HTTP API (queried by Grafana and Alloy)
+
+  alloy:
+    image: grafana/alloy:v1.1.0
+    command: ["run", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      - /var/run/docker.sock:/var/run/docker.sock  # needed to tail Docker logs
+    depends_on:
+      - loki
 
   grafana:
     image: grafana/grafana:10.4.2
@@ -19,6 +36,7 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     depends_on:
       - tempo
+      - loki
 
   app:
     build: .
@@ -28,7 +46,7 @@ services:
       - tempo
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-  
+
   # # Jaeger all-in-one: receives OTLP spans and provides the trace UI
   # jaeger:
   #   image: jaegertracing/all-in-one:1.56
@@ -46,4 +64,3 @@ services:
   #     - jaeger
   #   environment:
   #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-
